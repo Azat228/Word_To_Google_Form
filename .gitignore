@@ -1,0 +1,38 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Google OAuth sensitive files
+credentials.json
+token.json
+
+# Generated answer keys
+answer_key.json
+answer_key_*.json
+
+# Local test Word files
+*.docx
+
+# Environment variables / secrets
+.env
+.env.*
+
+# Build output
+build/
+dist/
+*.spec
+
+# IDE/editor files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

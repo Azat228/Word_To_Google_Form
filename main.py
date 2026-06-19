@@ -2,6 +2,9 @@ import sys
 from pathlib import Path
 
 from parser_docx import parse_docx
+from google_auth import get_credentials
+from google_forms import create_google_form
+from answer_key import save_answer_key
 
 
 def main():
@@ -35,6 +38,30 @@ def main():
                 print(f"   - {option}")
 
         print()
+
+    answer = input("Create Google Form? [y/N]: ").strip().lower()
+
+    if answer != "y":
+        print("Cancelled.")
+        return
+
+    print()
+    print("Authorizing Google account...")
+    creds = get_credentials()
+
+    print("Creating Google Form...")
+    form_info = create_google_form(parsed_test, creds)
+
+    print("Saving answer key...")
+    save_answer_key(parsed_test)
+
+    print()
+    print("Done.")
+    print("Form ID:", form_info["form_id"])
+    print("Responder URL:", form_info["responder_url"])
+    print("Edit URL:", form_info["edit_url"])
+    print()
+    print("Answer key saved to answer_key.json")
 
 
 if __name__ == "__main__":
