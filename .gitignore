@@ -36,3 +36,8 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
+responses_raw.json
+responses_normalized.json
+responses_*.json
+graded_results.json
+graded_results_*.json

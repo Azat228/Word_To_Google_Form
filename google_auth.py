@@ -7,8 +7,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 
 SCOPES = [
     "https://www.googleapis.com/auth/forms.body",
+    "https://www.googleapis.com/auth/forms.responses.readonly",
 ]
-
 
 def get_credentials(
     credentials_file: str = "credentials.json",
