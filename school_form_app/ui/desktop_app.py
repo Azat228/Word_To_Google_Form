@@ -2,15 +2,21 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from pathlib import Path
 
-from parser_docx import parse_docx
-from google_auth import get_credentials
-from google_forms import create_google_form
-from answer_key import save_answer_key
-from google_responses import normalize_form_responses, save_normalized_responses
-from grading import grade_responses, save_json
-from excel_export import export_reports
-from models import GradeThreshold
-
+from school_form_app.parsing.docx_parser import parse_docx
+from school_form_app.google_api.auth import get_credentials
+from school_form_app.google_api.forms import create_google_form
+from school_form_app.google_api.responses import (
+    normalize_form_responses,
+    save_normalized_responses,
+)
+from school_form_app.reports.answer_key import save_answer_key
+from school_form_app.reports.grading import grade_responses, save_json
+from school_form_app.reports.excel_export import export_reports
+from school_form_app.models import GradeThreshold
+from school_form_app.reports.qr_code import (
+    create_qr_code,
+    make_google_form_responder_url,
+)
 
 class TestApp:
     def __init__(self, root):
@@ -97,7 +103,13 @@ class TestApp:
             state="disabled",
         )
         self.report_button.pack(side="left", fill="x", expand=True, padx=5)
-
+        self.qr_button = tk.Button(
+            buttons_frame,
+            text="Скачать QR Code",
+            command=self.download_qr_code,
+            height=2,
+        )
+        self.qr_button.pack(side="left", fill="x", expand=True, padx=5)
         # -------------------------
         # Form ID manual field
         # -------------------------
@@ -237,12 +249,17 @@ class TestApp:
             self.form_id_entry.insert(0, self.form_id)
 
             self.answer_key_path = f"answer_key_{self.form_id}.json"
-
+            qr_code_path = f"qr_code_{self.form_id}.png"
             save_answer_key(
                 self.parsed_test,
                 path=self.answer_key_path,
                 option_scores=option_scores,
                 thresholds=thresholds,
+            )
+
+            create_qr_code(
+                url=form_info["responder_url"],
+                output_path=qr_code_path,
             )
 
             self.log("")
@@ -251,11 +268,13 @@ class TestApp:
             self.log(f"Responder URL: {form_info['responder_url']}")
             self.log(f"Edit URL: {form_info['edit_url']}")
             self.log(f"Answer key: {self.answer_key_path}")
+            self.log(f"QR code: {qr_code_path}")
 
             messagebox.showinfo(
                 "Готово",
                 "Google Form создана.\n\n"
                 f"Responder URL:\n{form_info['responder_url']}\n\n"
+                f"QR code:\n{qr_code_path}\n\n"
                 f"Answer key:\n{self.answer_key_path}",
             )
 
@@ -266,6 +285,47 @@ class TestApp:
 
         finally:
             self.create_form_button.config(state="normal", text="2. Создать Google Form")
+
+    def download_qr_code(self):
+        form_id = self.form_id_entry.get().strip()
+
+        if not form_id:
+            messagebox.showwarning(
+                "Нет Form ID",
+                "Сначала создай Google Form или вставь Form ID вручную.",
+            )
+            return
+
+        try:
+            responder_url = make_google_form_responder_url(form_id)
+
+            output_path = filedialog.asksaveasfilename(
+                title="Сохранить QR Code",
+                defaultextension=".png",
+                filetypes=[
+                    ("PNG image", "*.png"),
+                ],
+                initialfile=f"qr_code_{form_id}.png",
+            )
+
+            if not output_path:
+                self.log("Сохранение QR Code отменено.")
+                return
+
+            create_qr_code(
+                url=responder_url,
+                output_path=output_path,
+            )
+
+            self.log(f"QR Code создан: {output_path}")
+
+            messagebox.showinfo(
+                "Готово",
+                f"QR Code сохранён:\n{output_path}",
+            )
+
+        except Exception as error:
+            messagebox.showerror("Ошибка", str(error))
 
     def create_report(self):
         form_id = self.form_id_entry.get().strip()

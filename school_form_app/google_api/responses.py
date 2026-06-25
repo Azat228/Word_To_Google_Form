@@ -157,4 +157,4 @@ def save_normalized_responses(
     responses: list[dict],
     path: str = "responses_normalized.json",
 ) -> None:
-    save_json(responses, path)
+    save_json(responses, path)  

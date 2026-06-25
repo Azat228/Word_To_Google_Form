@@ -1,4 +1,4 @@
-from grading import grade_responses, save_json
+from school_form_app.reports.grading import grade_responses, save_json
 
 
 def main():

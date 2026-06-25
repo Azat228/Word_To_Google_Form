@@ -1,6 +1,5 @@
-from grading import load_json
-from excel_export import export_reports
-
+from school_form_app.reports.grading import load_json
+from school_form_app.reports.excel_export import export_reports
 
 def main():
     graded_results = load_json("graded_results.json")

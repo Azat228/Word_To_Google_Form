@@ -1,27 +1,17 @@
 # Virtual environments
-
 .venv/
 venv/
 env/
 
 # Python cache
-
-**pycache**/
+__pycache__/
 *.py[cod]
-*$py.class
 
 # Google OAuth secrets
-
 credentials.json
 token.json
 
-# Environment variables / secrets
-
-.env
-.env.*
-
 # Generated answer keys and response files
-
 answer_key.json
 answer_key_*.json
 responses_raw.json
@@ -29,31 +19,29 @@ responses_normalized.json
 responses_*.json
 graded_results.json
 graded_results_*.json
-*.json
-# Generated reports with personal/student data
 
+# Generated Excel reports
 *.xlsx
 
-# # Local Word test files with real student/school content
+# Generated QR codes
+qr_code_*.png
 
-# *.docx
+# Local Word files
+*.docx
+
+# Environment variables
+.env
+.env.*
 
 # Build output
-
 build/
 dist/
 *.spec
 
-# IDE / editor files
-
+# IDE/editor files
 .vscode/
 .idea/
 
 # OS files
-
 .DS_Store
 Thumbs.db
-
-# Logs
-
-*.log

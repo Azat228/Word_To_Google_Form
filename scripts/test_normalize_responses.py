@@ -1,6 +1,8 @@
-from google_auth import get_credentials
-from google_responses import normalize_form_responses, save_normalized_responses
-
+from school_form_app.google_api.auth import get_credentials
+from school_form_app.google_api.responses import (
+    normalize_form_responses,
+    save_normalized_responses,
+)
 
 def main():
     form_id = input("Paste Google Form ID: ").strip()

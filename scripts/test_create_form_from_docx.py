@@ -1,8 +1,8 @@
-from parser_docx import parse_docx
-from google_auth import get_credentials
-from google_forms import create_google_form
-from answer_key import save_answer_key
-from models import GradeThreshold
+from school_form_app.parsing.docx_parser import parse_docx
+from school_form_app.google_api.auth import get_credentials
+from school_form_app.google_api.forms import create_google_form
+from school_form_app.reports.answer_key import save_answer_key
+from school_form_app.models import GradeThreshold
 
 
 def main():

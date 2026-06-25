@@ -1,7 +1,7 @@
 import re
 from docx import Document
 
-from models import ParsedTest, Question, AnswerOption
+from school_form_app.models import ParsedTest, Question, AnswerOption
 
 
 QUESTION_RE = re.compile(r"^\s*(\d+)[\.\)]\s*(.+)")

@@ -1,5 +1,4 @@
-from parser_docx import parse_docx
-
+from school_form_app.parsing.docx_parser import parse_docx
 
 def main():
     parsed_test = parse_docx(

@@ -1,6 +1,6 @@
 from googleapiclient.discovery import build
 
-from models import ParsedTest
+from school_form_app.models import ParsedTest
 
 
 def create_google_form(parsed_test: ParsedTest, creds) -> dict:

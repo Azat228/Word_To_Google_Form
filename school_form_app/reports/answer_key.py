@@ -1,6 +1,5 @@
 import json
-
-from models import ParsedTest, GradeThreshold
+from school_form_app.models import ParsedTest, GradeThreshold
 
 
 def save_answer_key(
