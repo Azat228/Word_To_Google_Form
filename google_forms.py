@@ -19,6 +19,20 @@ def create_google_form(parsed_test: ParsedTest, creds) -> dict:
 
     requests = []
 
+    # Optional description / instructions
+    if parsed_test.instructions:
+        requests.append(
+            {
+                "updateFormInfo": {
+                    "info": {
+                        "description": parsed_test.instructions
+                    },
+                    "updateMask": "description",
+                }
+            }
+        )
+
+    # Student full name
     requests.append(
         {
             "createItem": {
@@ -40,6 +54,29 @@ def create_google_form(parsed_test: ParsedTest, creds) -> dict:
         }
     )
 
+    # Student class
+    requests.append(
+        {
+            "createItem": {
+                "item": {
+                    "title": "Класс",
+                    "questionItem": {
+                        "question": {
+                            "required": True,
+                            "textQuestion": {
+                                "paragraph": False
+                            },
+                        }
+                    },
+                },
+                "location": {
+                    "index": 1
+                },
+            }
+        }
+    )
+
+    # Student email, optional
     requests.append(
         {
             "createItem": {
@@ -55,25 +92,25 @@ def create_google_form(parsed_test: ParsedTest, creds) -> dict:
                     },
                 },
                 "location": {
-                    "index": 1
+                    "index": 2
                 },
             }
         }
     )
 
-    for index, question in enumerate(parsed_test.questions, start=2):
+    for index, question in enumerate(parsed_test.questions, start=3):
         requests.append(
             {
                 "createItem": {
                     "item": {
-                        "title": question.text,
+                        "title": f"{question.number}. {question.title}",
                         "questionItem": {
                             "question": {
                                 "required": True,
                                 "choiceQuestion": {
                                     "type": "RADIO",
                                     "options": [
-                                        {"value": option}
+                                        {"value": option.text}
                                         for option in question.options
                                     ],
                                     "shuffle": False,

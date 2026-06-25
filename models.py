@@ -1,15 +1,30 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List
 
 
 @dataclass
-class Question:
+class AnswerOption:
     text: str
-    options: List[str]
-    correct_answer: str | None = None
+    score: int = 0
+
+
+@dataclass
+class Question:
+    number: int
+    title: str
+    options: List[AnswerOption]
+
+
+@dataclass
+class GradeThreshold:
+    min_score: int
+    max_score: int
+    label: str
 
 
 @dataclass
 class ParsedTest:
     title: str
+    instructions: str | None
     questions: List[Question]
+    thresholds: List[GradeThreshold] = field(default_factory=list)
