@@ -1,43 +1,59 @@
-# Python virtual environment
+# Virtual environments
+
 .venv/
 venv/
 env/
 
 # Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
 
-# Google OAuth sensitive files
+**pycache**/
+*.py[cod]
+*$py.class
+
+# Google OAuth secrets
+
 credentials.json
 token.json
 
-# Generated answer keys
-answer_key.json
-answer_key_*.json
-
-# Local test Word files
-*.docx
-
 # Environment variables / secrets
+
 .env
 .env.*
 
-# Build output
-build/
-dist/
-*.spec
+# Generated answer keys and response files
 
-# IDE/editor files
-.vscode/
-.idea/
-
-# OS files
-.DS_Store
-Thumbs.db
+answer_key.json
+answer_key_*.json
 responses_raw.json
 responses_normalized.json
 responses_*.json
 graded_results.json
 graded_results_*.json
+*.json
+# Generated reports with personal/student data
+
+*.xlsx
+
+# # Local Word test files with real student/school content
+
+# *.docx
+
+# Build output
+
+build/
+dist/
+*.spec
+
+# IDE / editor files
+
+.vscode/
+.idea/
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# Logs
+
+*.log
