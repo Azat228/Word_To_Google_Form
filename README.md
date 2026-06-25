@@ -1,77 +1,96 @@
-# Word_to_Google_Form
+﻿# Word to Google Form
 
-A small toolset to convert tests in Microsoft Word (.docx) into Google Forms, collect responses, grade them and export Excel reports.
+A Python application that converts multiple-choice tests from Microsoft Word (`.docx`) into Google Forms, downloads responses, grades them, and exports Excel reports.
 
-**Key features**
+## What this project does
 
-- Parse .docx test documents and extract questions and options.
-- Create a Google Form from the parsed test.
-- Save an answer key (JSON) for grading.
-- Download and normalize Google Form responses.
-- Grade responses, generate summary and detailed results.
-- Export Excel reports (short and detailed) using `openpyxl`.
+- Parses a `.docx` test file and extracts numbered questions with four answer options.
+- Creates a Google Form with student fields and parsed test questions.
+- Saves an answer key as JSON for grading.
+- Downloads and normalizes Google Form responses.
+- Grades responses by matching answers to the saved answer key.
+- Generates summary and detailed Excel reports.
+- Creates a QR code for the Google Form responder link.
 
-**Important files**
+## Project structure
 
-- [main.py](main.py#L1) — CLI tool to parse a .docx and create a Google Form.
-- [app.py](app.py#L1) — Tkinter GUI application for selecting a .docx, creating a form and exporting reports.
-- [parser_docx.py](parser_docx.py#L1) — .docx parsing logic.
-- [google_auth.py](google_auth.py#L1) — Google OAuth helper (requires `credentials.json`).
-- [google_forms.py](google_forms.py#L1) — Functions to create Google Forms.
-- [answer_key.py](answer_key.py#L1) — Save/load answer key JSON.
-- [google_responses.py](google_responses.py#L1) — Download & normalize form responses.
-- [grading.py](grading.py#L1) — Grade responses and helper to save JSON results.
-- [excel_export.py](excel_export.py#L1) — Export reports to Excel files.
-- [models.py](models.py#L1) — Data models used across the project.
-- `credentials.json` / `token.json` — Google API credentials and token (not checked into VCS).
-- Tests: `test_*.py` files for unit tests.
+- `main.py` — application entry point.
+- `requirements.txt` — Python dependency list.
+- `credentials.json` / `token.json` — Google OAuth credentials and saved token.
+
+### Core package files
+
+- `school_form_app/ui/desktop_app.py` — Tkinter GUI interface.
+- `school_form_app/parsing/docx_parser.py` — parses `.docx` files and builds the in-memory test structure.
+- `school_form_app/google_api/auth.py` — Google OAuth credential flow.
+- `school_form_app/google_api/forms.py` — creates Google Forms programmatically.
+- `school_form_app/google_api/responses.py` — downloads and normalizes form responses.
+- `school_form_app/reports/answer_key.py` — saves answer key JSON.
+- `school_form_app/reports/grading.py` — grades student responses.
+- `school_form_app/reports/excel_export.py` — exports Excel reports.
+- `school_form_app/reports/qr_code.py` — generates QR codes for form URLs.
+- `school_form_app/models.py` — dataclasses for tests, questions, options, and thresholds.
 
 ## Requirements
 
-Install runtime dependencies:
+Install dependencies:
 
-```
+```bash
 python -m pip install -r requirements.txt
 ```
 
-See [requirements.txt](requirements.txt#L1) for pinned versions.
+Required packages:
+
+- `python-docx`
+- `google-api-python-client`
+- `google-auth-oauthlib`
+- `google-auth`
+- `openpyxl`
+- `qrcode[pil]`
 
 ## Google API setup
 
-1. Go to the Google Cloud Console and create a project.
-2. Enable the Google Forms API and Google Drive API (if required).
-3. Create OAuth 2.0 Client credentials and download the `credentials.json` file.
-4. Place `credentials.json` in the project root.
-5. On first run the app will open a browser to get consent and will save `token.json`.
+1. Create a Google Cloud project.
+2. Enable the Google Forms API.
+3. Create OAuth 2.0 client credentials.
+4. Download `credentials.json` and place it in the project root.
+5. Run the app to complete authorization and generate `token.json`.
 
 ## Usage
 
-CLI (create a form from a .docx):
+Run the app:
 
-```
-python main.py "path/to/test.docx"
-```
-
-GUI (interactive):
-
-```
-python app.py
+```bash
+python main.py
 ```
 
-- In the GUI you can choose a Word file, create the Google Form, then fetch responses and export Excel reports.
-- The GUI uses the same Google credentials flow; ensure `credentials.json` is present.
+### GUI workflow
 
-## Outputs
+1. Select a Word `.docx` file.
+2. Adjust answer option scores and grading thresholds if needed.
+3. Click `Создать Google Form` to create the form and save the answer key.
+4. Optionally download a QR code for the form link.
+5. Click `Получить ответы и создать Excel` to fetch responses and export reports.
 
-- Answer keys: `answer_key.json` or `answer_key_<form_id>.json`
-- Normalized responses: `responses_normalized.json`
-- Graded results: `graded_results.json`
-- Excel reports: created in the directory you select via the GUI (short and detailed reports).
+## Input format expectations
 
+- Questions must use numbered headings like `1. Question text`.
+- Each question should be followed by exactly four answer option lines.
+- Instructions may appear before the first numbered question.
+- The parser stops at a line beginning with `подсчет результатов`.
 
+## Output files
+
+- `answer_key_<form_id>.json` — saved answer key.
+- `responses_normalized.json` — normalized Google Forms responses.
+- `graded_results.json` — graded response results.
+- Excel reports in the selected output folder:
+  - `report.xlsx` — summary report.
+  - `detailed_report.xlsx` — detailed report.
+- `qr_code_<form_id>.png` — QR code for the form responder link.
 
 ## Notes & Troubleshooting
 
-- Keep `credentials.json` private; do not commit it to source control.
-- If Google API calls fail, check that the OAuth consent and scopes are configured correctly for the Forms API.
-- If parsing fails for a specific .docx, open it in Word and verify the test formatting matches the expected patterns in `parser_docx.py`.
+- Keep `credentials.json` private and do not commit it.
+- If parsing fails, ensure the `.docx` uses the expected question/option formatting.
+- The GUI supports custom grading thresholds.
