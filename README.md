@@ -136,17 +136,6 @@ The app creates the following files during normal use:
   - `report.xlsx`
   - `detailed_report.xlsx`
 - `qr_code_<form_id>.png` — QR code for the form link
-
-## Screenshots
-
-This section collects the same images in one place for quick reference:
-
-![Main menu](img_for_readme/main_menu.png)
-
-![Four-option workflow](img_for_readme/4_variant.png)
-
-![Yes/No keyed workflow](img_for_readme/yes_no_key.png)
-
 ## Project structure
 
 - `main.py` — application entry point
