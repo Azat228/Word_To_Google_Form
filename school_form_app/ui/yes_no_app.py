@@ -2,7 +2,10 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from pathlib import Path
 
-from school_form_app.parsing.docx_parser import parse_docx
+from school_form_app.parsing.yes_no_keyed_parser import (
+    parse_yes_no_keyed_docx,
+    parse_question_numbers,
+)
 from school_form_app.google_api.auth import get_credentials
 from school_form_app.google_api.forms import create_google_form
 from school_form_app.google_api.responses import (
@@ -12,16 +15,17 @@ from school_form_app.google_api.responses import (
 from school_form_app.reports.answer_key import save_answer_key
 from school_form_app.reports.grading import grade_responses, save_json
 from school_form_app.reports.excel_export import export_reports
-from school_form_app.models import GradeThreshold
 from school_form_app.reports.qr_code import (
     create_qr_code,
     make_google_form_responder_url,
 )
+from school_form_app.models import GradeThreshold
 
-class TestApp:
+
+class YesNoTestApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Word to Google Form Report App")
+        self.root.title("Yes/No Keyed Test App")
         self.root.geometry("950x750")
 
         self.docx_path = None
@@ -32,29 +36,50 @@ class TestApp:
         self.build_ui()
 
     def build_ui(self):
-        # -------------------------
-        # Option scores
-        # -------------------------
-        scores_frame = tk.LabelFrame(self.root, text="Стоимость вариантов ответа")
-        scores_frame.pack(fill="x", padx=10, pady=5)
+        key_frame = tk.LabelFrame(
+            self.root,
+            text="Ключ обработки ДА/НЕТ",
+        )
+        key_frame.pack(fill="x", padx=10, pady=5)
 
-        self.score_entries = []
+        tk.Label(key_frame, text="ДА = 1 балл для вопросов:").grid(
+            row=0,
+            column=0,
+            padx=5,
+            pady=5,
+            sticky="w",
+        )
 
-        default_scores = ["0", "1", "2", "3"]
+        self.yes_key_entry = tk.Entry(key_frame)
+        self.yes_key_entry.insert(0, "1,3,5,6,8,10,11,13,15,19")
+        self.yes_key_entry.grid(
+            row=0,
+            column=1,
+            padx=5,
+            pady=5,
+            sticky="ew",
+        )
 
-        for index in range(4):
-            label = tk.Label(scores_frame, text=f"{index + 1}-й вариант:")
-            label.grid(row=0, column=index * 2, padx=5, pady=5)
+        tk.Label(key_frame, text="НЕТ = 1 балл для вопросов:").grid(
+            row=1,
+            column=0,
+            padx=5,
+            pady=5,
+            sticky="w",
+        )
 
-            entry = tk.Entry(scores_frame, width=6)
-            entry.insert(0, default_scores[index])
-            entry.grid(row=0, column=index * 2 + 1, padx=5, pady=5)
+        self.no_key_entry = tk.Entry(key_frame)
+        self.no_key_entry.insert(0, "2,4,7,9,12,14,16,17,18,20")
+        self.no_key_entry.grid(
+            row=1,
+            column=1,
+            padx=5,
+            pady=5,
+            sticky="ew",
+        )
 
-            self.score_entries.append(entry)
+        key_frame.columnconfigure(1, weight=1)
 
-        # -------------------------
-        # Thresholds
-        # -------------------------
         thresholds_frame = tk.LabelFrame(
             self.root,
             text="Градации отчёта. Формат: min-max=Название",
@@ -66,15 +91,12 @@ class TestApp:
 
         self.thresholds_text.insert(
             "1.0",
-            "0-9=Минимальный уровень\n"
-            "10-18=Лёгкая степень\n"
-            "19-29=Умеренная степень\n"
-            "30-63=Выраженная степень\n",
+            "0-3=Норма\n"
+            "4-8=Лёгкая степень безнадёжности\n"
+            "9-14=Умеренная степень безнадёжности\n"
+            "15-20=Тяжёлая степень безнадёжности\n",
         )
 
-        # -------------------------
-        # Buttons
-        # -------------------------
         buttons_frame = tk.Frame(self.root)
         buttons_frame.pack(fill="x", padx=10, pady=5)
 
@@ -103,6 +125,7 @@ class TestApp:
             state="disabled",
         )
         self.report_button.pack(side="left", fill="x", expand=True, padx=5)
+
         self.qr_button = tk.Button(
             buttons_frame,
             text="Скачать QR Code",
@@ -110,18 +133,13 @@ class TestApp:
             height=2,
         )
         self.qr_button.pack(side="left", fill="x", expand=True, padx=5)
-        # -------------------------
-        # Form ID manual field
-        # -------------------------
+
         form_frame = tk.LabelFrame(self.root, text="Google Form ID")
         form_frame.pack(fill="x", padx=10, pady=5)
 
         self.form_id_entry = tk.Entry(form_frame)
         self.form_id_entry.pack(fill="x", padx=5, pady=5)
 
-        # -------------------------
-        # Preview
-        # -------------------------
         preview_frame = tk.LabelFrame(self.root, text="Preview / Logs")
         preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
@@ -133,21 +151,23 @@ class TestApp:
         self.preview_box.see(tk.END)
         self.root.update_idletasks()
 
-    def get_option_scores(self) -> list[int]:
-        scores = []
+    def get_yes_no_key(self) -> tuple[set[int], set[int]]:
+        yes_score_questions = parse_question_numbers(
+            self.yes_key_entry.get()
+        )
 
-        for entry in self.score_entries:
-            value = entry.get().strip()
+        no_score_questions = parse_question_numbers(
+            self.no_key_entry.get()
+        )
 
-            if not value:
-                raise ValueError("Стоимость варианта не может быть пустой.")
+        overlap = yes_score_questions.intersection(no_score_questions)
 
-            scores.append(int(value))
+        if overlap:
+            raise ValueError(
+                f"Эти вопросы есть и в ДА, и в НЕТ ключе: {sorted(overlap)}"
+            )
 
-        if len(scores) != 4:
-            raise ValueError("Нужно ровно 4 стоимости вариантов.")
-
-        return scores
+        return yes_score_questions, no_score_questions
 
     def get_thresholds(self) -> list[GradeThreshold]:
         raw_text = self.thresholds_text.get("1.0", tk.END).strip()
@@ -165,7 +185,7 @@ class TestApp:
             if "=" not in line or "-" not in line:
                 raise ValueError(
                     f"Неверный формат градации: {line}\n"
-                    "Используй формат: 0-9=Минимальный уровень"
+                    "Используй формат: 0-3=Норма"
                 )
 
             range_part, label = line.split("=", 1)
@@ -194,14 +214,15 @@ class TestApp:
             return
 
         try:
-            option_scores = self.get_option_scores()
+            yes_key, no_key = self.get_yes_no_key()
             thresholds = self.get_thresholds()
 
             self.docx_path = Path(file_path)
 
-            self.parsed_test = parse_docx(
+            self.parsed_test = parse_yes_no_keyed_docx(
                 str(self.docx_path),
-                option_scores=option_scores,
+                yes_score_questions=yes_key,
+                no_score_questions=no_key,
             )
 
             self.parsed_test.thresholds = thresholds
@@ -235,7 +256,6 @@ class TestApp:
             self.create_form_button.config(state="disabled", text="Создаю...")
             self.root.update_idletasks()
 
-            option_scores = self.get_option_scores()
             thresholds = self.get_thresholds()
 
             self.log("Авторизация Google...")
@@ -254,17 +274,12 @@ class TestApp:
             self.answer_key_path = str(
                 answer_keys_dir / f"answer_key_{self.form_id}.json"
             )
-            qr_code_path = f"qr_code_{self.form_id}.png"
+
             save_answer_key(
                 self.parsed_test,
                 path=self.answer_key_path,
-                option_scores=option_scores,
+                option_scores=None,
                 thresholds=thresholds,
-            )
-
-            create_qr_code(
-                url=form_info["responder_url"],
-                output_path=qr_code_path,
             )
 
             self.log("")
@@ -273,13 +288,11 @@ class TestApp:
             self.log(f"Responder URL: {form_info['responder_url']}")
             self.log(f"Edit URL: {form_info['edit_url']}")
             self.log(f"Answer key: {self.answer_key_path}")
-            self.log(f"QR code: {qr_code_path}")
 
             messagebox.showinfo(
                 "Готово",
                 "Google Form создана.\n\n"
                 f"Responder URL:\n{form_info['responder_url']}\n\n"
-                f"QR code:\n{qr_code_path}\n\n"
                 f"Answer key:\n{self.answer_key_path}",
             )
 
@@ -289,7 +302,10 @@ class TestApp:
             messagebox.showerror("Ошибка", str(error))
 
         finally:
-            self.create_form_button.config(state="normal", text="2. Создать Google Form")
+            self.create_form_button.config(
+                state="normal",
+                text="2. Создать Google Form",
+            )
 
     def download_qr_code(self):
         form_id = self.form_id_entry.get().strip()
@@ -342,7 +358,9 @@ class TestApp:
         answer_key_path = self.answer_key_path
 
         if not answer_key_path:
-            possible_path = str(Path("answer_keys") / f"answer_key_{form_id}.json")
+            possible_path = str(
+                Path("answer_keys") / f"answer_key_{form_id}.json"
+            )
 
             if Path(possible_path).exists():
                 answer_key_path = possible_path
@@ -381,8 +399,9 @@ class TestApp:
             )
 
             save_json(graded_results, "graded_results.json")
+
             output_dir = filedialog.askdirectory(
-            title="Выберите папку для сохранения отчётов"
+                title="Выберите папку для сохранения отчётов"
             )
 
             if not output_dir:
@@ -392,18 +411,18 @@ class TestApp:
             self.log("Создание Excel отчётов...")
 
             report_path, detailed_report_path = export_reports(
-            graded_results=graded_results,
-            output_dir=output_dir,
+                graded_results=graded_results,
+                output_dir=output_dir,
             )
 
             self.log(f"Краткий отчёт создан: {report_path}")
             self.log(f"Подробный отчёт создан: {detailed_report_path}")
 
             messagebox.showinfo(
-            "Готово",
-            "Excel отчёты созданы:\n\n"
-            f"Краткий отчёт:\n{report_path}\n\n"
-            f"Подробный отчёт:\n{detailed_report_path}",
+                "Готово",
+                "Excel отчёты созданы:\n\n"
+                f"Краткий отчёт:\n{report_path}\n\n"
+                f"Подробный отчёт:\n{detailed_report_path}",
             )
 
         except Exception as error:
@@ -418,7 +437,7 @@ class TestApp:
 
 def main():
     root = tk.Tk()
-    TestApp(root)
+    YesNoTestApp(root)
     root.mainloop()
 
 

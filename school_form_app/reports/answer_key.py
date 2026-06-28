@@ -1,10 +1,12 @@
 import json
+from pathlib import Path
+
 from school_form_app.models import ParsedTest, GradeThreshold
 
 
 def save_answer_key(
     parsed_test: ParsedTest,
-    path: str = "answer_key.json",
+    path: str = "answer_keys/answer_key.json",
     option_scores: list[int] | None = None,
     thresholds: list[GradeThreshold] | None = None,
 ) -> None:
@@ -36,5 +38,8 @@ def save_answer_key(
         ],
     }
 
-    with open(path, "w", encoding="utf-8") as file:
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(output_path, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2)
