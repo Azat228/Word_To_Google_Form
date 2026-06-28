@@ -19,6 +19,7 @@ responses_normalized.json
 responses_*.json
 graded_results.json
 graded_results_*.json
+*.json
 
 # Generated Excel reports
 *.xlsx
@@ -26,8 +27,6 @@ graded_results_*.json
 # Generated QR codes
 qr_code_*.png
 
-# Local Word files
-*.docx
 
 # Environment variables
 .env
