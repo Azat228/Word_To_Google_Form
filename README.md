@@ -157,6 +157,7 @@ This section collects the same images in one place for quick reference:
 - `school_form_app/google_api/` — Google Forms authentication and API integration
 - `school_form_app/reports/` — answer-key saving, grading, and Excel export
 - `school_form_app/models.py` — data structures used by the app
+- `*.docx` - word documents as a template 
 
 ## Notes
 
