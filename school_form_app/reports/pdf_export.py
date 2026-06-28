@@ -158,6 +158,14 @@ def export_summary_pdf(
         alignment=TA_CENTER,
         text_color=colors.white,
     )
+    risk_style = make_paragraph_style(
+        name="RiskCustom",
+        font_name=bold_font,
+        font_size=9,
+        leading=11,
+        alignment=TA_CENTER,
+        text_color=colors.red,
+    )   
 
     doc = SimpleDocTemplate(
         str(output),
@@ -231,6 +239,12 @@ def export_summary_pdf(
         story.append(category_table)
         story.append(Spacer(1, 14))
 
+    has_high_risk = any(
+        result.get("risk_flag") in ("Высокий риск", "риск") for result in graded_results
+    )
+
+    risk_header_style = risk_style if has_high_risk else header_style
+
     main_table_data = [
         [
             paragraph("№", header_style),
@@ -239,6 +253,7 @@ def export_summary_pdf(
             paragraph("Балл", header_style),
             paragraph("Макс.", header_style),
             paragraph("Градация", header_style),
+            paragraph("Высокий риск", risk_header_style),
         ]
     ]
 
@@ -251,6 +266,7 @@ def export_summary_pdf(
                 paragraph(result.get("total_score", 0), normal_style),
                 paragraph(result.get("max_score", 0), normal_style),
                 paragraph(result.get("grade_label", ""), small_style),
+                paragraph(result.get("risk_flag", "Нет"), small_style),
             ]
         )
 
@@ -258,11 +274,12 @@ def export_summary_pdf(
         main_table_data,
         colWidths=[
             1.2 * cm,
-            7 * cm,
-            2.5 * cm,
-            2 * cm,
-            2 * cm,
-            10 * cm,
+            6 * cm,
+            2.2 * cm,
+            1.8 * cm,
+            1.8 * cm,
+            8 * cm,
+            4 * cm,
         ],
         repeatRows=1,
     )

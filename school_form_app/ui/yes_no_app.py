@@ -137,13 +137,22 @@ class YesNoTestApp:
         )
         self.report_button.pack(side="left", fill="x", expand=True, padx=5)
 
+        self.clear_cache_button = tk.Button(
+            buttons_frame,
+            text="Очистить кэш",
+            command=self.clear_cache,
+            height=2,
+            state="disabled",
+        )
+        self.clear_cache_button.pack(side="left", fill="x", expand=True, padx=5)
+
         form_frame = tk.LabelFrame(self.root, text="Google Form ID")
         form_frame.pack(fill="x", padx=10, pady=5)
 
         self.form_id_entry = tk.Entry(form_frame)
         self.form_id_entry.pack(fill="x", padx=5, pady=5)
 
-        preview_frame = tk.LabelFrame(self.root, text="Preview / Logs")
+        preview_frame = tk.LabelFrame(self.root, text="Просмотр / Логи")
         preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         self.preview_box = tk.Text(preview_frame, wrap="word")
@@ -246,6 +255,12 @@ class YesNoTestApp:
                 self.log("")
 
             self.create_form_button.config(state="normal")
+            # Keep report and cache buttons disabled until a new form/report flow completes
+            self.report_button.config(state="disabled")
+            self.clear_cache_button.config(
+                state="disabled",
+                text="Очистить кэш",
+            )
 
         except Exception as error:
             messagebox.showerror("Ошибка", str(error))
@@ -356,6 +371,34 @@ class YesNoTestApp:
         finally:
             self.qr_button.config(state="normal", text="Скачать QR Code")
 
+    def clear_cache(self):
+        self.log("Очистка временных JSON и QR файлов...")
+
+        deleted_files = cleanup_generated_files()
+        self.answer_key_path = None
+
+        if deleted_files:
+            self.log(f"Удалено файлов: {len(deleted_files)}")
+            for deleted_file in deleted_files:
+                self.log(f"Удалён: {deleted_file}")
+        else:
+            self.log("Файлы для очистки не найдены.")
+
+        self.clear_cache_button.config(
+            state="disabled",
+            text="Загрузите новый Word файл",
+        )
+
+        message = (
+            "Кэш очищен. Удалены временные JSON и QR файлы, кроме credentials и token.\n\n"
+            f"Удалено файлов: {len(deleted_files)}"
+        )
+
+        messagebox.showinfo(
+            "Готово",
+            message,
+        )
+
     def create_report(self):
         form_id = self.form_id_entry.get().strip()
 
@@ -424,30 +467,21 @@ class YesNoTestApp:
             )
             pdf_report_path = export_summary_pdf(
                 graded_results=graded_results,
-                output_path=str(Path(output_dir) / "summary_report.pdf"),
+                output_path=str(Path(output_dir) / "PDF_отчет.pdf"),
             )
 
             self.log(f"Краткий отчёт создан: {report_path}")
             self.log(f"Подробный отчёт создан: {detailed_report_path}")
             self.log(f"PDF отчёт создан: {pdf_report_path}")
 
-            self.log("Очистка временных JSON и QR файлов...")
-
-            deleted_files = cleanup_generated_files()
-
-            self.answer_key_path = None
-
-            self.log(f"Удалено файлов: {len(deleted_files)}")
-
-            for deleted_file in deleted_files:
-                self.log(f"Удалён: {deleted_file}")
+            self.clear_cache_button.config(state="normal")
 
             message = (
                 "Отчёты созданы:\n\n"
                 f"Краткий Excel отчёт:\n{report_path}\n\n"
                 f"Подробный Excel отчёт:\n{detailed_report_path}\n\n"
                 f"PDF отчёт:\n{pdf_report_path}\n\n"
-                f"Временные JSON/QR файлы удалены: {len(deleted_files)}"
+                "Теперь можно очистить кэш, чтобы удалить временные JSON и QR файлы."
             )
 
             messagebox.showinfo(
@@ -460,8 +494,8 @@ class YesNoTestApp:
 
         finally:
             self.report_button.config(
-                state="normal",
-                text="3. Получить ответы и создать Excel",
+                state="normal" if self.form_id and answer_key_path else "disabled",
+                text="3. Получить ответы и создать Excel/PDF",
             )
 
 

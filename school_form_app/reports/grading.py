@@ -53,7 +53,29 @@ def get_option_score(question: dict, student_answer: str | None) -> int:
             return option["score"]
 
     return 0
+def get_risk_flag(grade_label: str) -> str:
+    label_lower = grade_label.lower()
 
+    urgent_words = [
+        "тяж",
+        "высок",
+        "выраж",
+        "severe",
+        "high",
+        "urgent",
+    ]
+
+    review_words = [
+        "умерен",
+        "moderate",
+    ]
+
+    if any(word in label_lower for word in urgent_words):
+        return "Высокий риск"
+
+    if any(word in label_lower for word in review_words):
+        return "риск"
+    return "Нет"
 
 def grade_single_response(response: dict, answer_key: dict) -> dict:
     answers = response["answers"]
@@ -113,7 +135,7 @@ def grade_single_response(response: dict, answer_key: dict) -> dict:
 
     thresholds = answer_key.get("thresholds", [])
     grade_label = get_grade_label(total_score, thresholds)
-
+    risk_flag = get_risk_flag(grade_label)
     return {
         "response_id": response.get("response_id"),
         "submitted_at": response.get("submitted_at"),
@@ -124,6 +146,7 @@ def grade_single_response(response: dict, answer_key: dict) -> dict:
         "max_score": max_score,
         "grade_label": grade_label,
         "questions": question_results,
+        "risk_flag": risk_flag,
     }
 
 

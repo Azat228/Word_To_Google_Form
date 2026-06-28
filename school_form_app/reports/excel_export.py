@@ -70,7 +70,7 @@ def export_summary_report(
 ) -> str:
     wb = Workbook()
     ws = wb.active
-    ws.title = "Report"
+    ws.title = "Отчет"
 
     headers = [
         "№",
@@ -81,6 +81,7 @@ def export_summary_report(
         "Общий балл",
         "Макс. балл",
         "Градация",
+        "Высокий риск",
         "Примечание",
     ]
 
@@ -104,6 +105,7 @@ def export_summary_report(
                 result.get("total_score", 0),
                 result.get("max_score", 0),
                 result.get("grade_label", ""),
+                result.get("risk_flag", "Нет"),
                 note_text,
             ]
         )
@@ -111,7 +113,11 @@ def export_summary_report(
         current_row = ws.max_row
         grade_cell = ws.cell(row=current_row, column=8)
         grade_cell.fill = get_grade_fill(str(grade_cell.value))
-
+        risk_cell = ws.cell(row=current_row, column=9)
+        if risk_cell.value == "Высокий риск":
+            risk_cell.fill = PatternFill("solid", fgColor="FFC7CE")
+        elif risk_cell.value == "риск":
+            risk_cell.fill = PatternFill("solid", fgColor="FFEB9C")
     apply_common_sheet_style(ws)
 
     output = Path(output_path)
@@ -127,7 +133,7 @@ def export_detailed_report(
 ) -> str:
     wb = Workbook()
     ws = wb.active
-    ws.title = "Detailed Report"
+    ws.title = "Детальный отчет"
 
     headers = [
         "№ ученика",
@@ -138,6 +144,7 @@ def export_detailed_report(
         "Общий балл",
         "Макс. балл",
         "Градация",
+        "Высокий риск",
         "№ вопроса",
         "Вопрос",
         "Ответ ребёнка",
@@ -171,9 +178,10 @@ def export_detailed_report(
                     result.get("total_score", 0),
                     result.get("max_score", 0),
                     result.get("grade_label", ""),
+                    result.get("risk_flag", "Нет"),
                 ]
             else:
-                student_columns = ["", "", "", "", "", "", "", ""]
+                student_columns = ["", "", "", "", "", "", "", "", ""]
 
             question_columns = [
                 question.get("number", ""),
@@ -190,7 +198,7 @@ def export_detailed_report(
         # Merge student-level cells vertically.
         # Columns A-H belong to the student, not to every individual question.
         if block_end_row > block_start_row:
-            for column in range(1, 9):
+            for column in range(1, 10):
                 ws.merge_cells(
                     start_row=block_start_row,
                     start_column=column,
@@ -206,8 +214,14 @@ def export_detailed_report(
                 )
 
         # Color the merged grade cell.
-        grade_cell = ws.cell(row=block_start_row, column=8)
+        grade_cell = ws.cell(row=block_start_row, column=9)
         grade_cell.fill = get_grade_fill(str(grade_cell.value))
+        risk_cell = ws.cell(row=block_start_row, column=9)
+
+        if risk_cell.value == "Высокий риск":
+            risk_cell.fill = PatternFill("solid", fgColor="FFC7CE")
+        elif risk_cell.value == "риск":
+            risk_cell.fill = PatternFill("solid", fgColor="FFEB9C")
 
         student_index += 1
 
@@ -232,8 +246,8 @@ def export_detailed_report(
     auto_size_columns(ws)
 
     # Make question/answer columns wider.
-    ws.column_dimensions["J"].width = 35  # Вопрос
-    ws.column_dimensions["K"].width = 60  # Ответ ребёнка
+    ws.column_dimensions["K"].width = 35  # Вопрос
+    ws.column_dimensions["L"].width = 60  # Ответ ребёнка
 
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -248,8 +262,8 @@ def export_reports(
     output_folder = Path(output_dir)
     output_folder.mkdir(parents=True, exist_ok=True)
 
-    summary_path = output_folder / "report.xlsx"
-    detailed_path = output_folder / "detailed_report.xlsx"
+    summary_path = output_folder / "отчет.xlsx"
+    detailed_path = output_folder / "детальный_отчет.xlsx"
 
     export_summary_report(
         graded_results=graded_results,
