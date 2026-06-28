@@ -1,3 +1,9 @@
+"""Tkinter workflow for the yes/no keyed test application.
+
+The UI collects the scoring key, parses a Word document, creates a Google
+Form, and builds the reporting artifacts for the test results.
+"""
+
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from pathlib import Path
@@ -38,6 +44,9 @@ class YesNoTestApp:
         self.build_ui()
 
     def build_ui(self):
+        # Build the main window layout in stages: first the scoring key inputs,
+        # then the report thresholds, then the action buttons and preview panel.
+        # This keeps the workflow intuitive and grouped by responsibility.
         key_frame = tk.LabelFrame(
             self.root,
             text="Ключ обработки ДА/НЕТ",
@@ -52,6 +61,8 @@ class YesNoTestApp:
             sticky="w",
         )
 
+        # The yes/no scoring key is entered as question numbers that should add
+        # one point when the student answers positively or negatively.
         self.yes_key_entry = tk.Entry(key_frame)
         self.yes_key_entry.insert(0, "1,3,5,6,8,10,11,13,15,19")
         self.yes_key_entry.grid(
@@ -70,6 +81,8 @@ class YesNoTestApp:
             sticky="w",
         )
 
+        # The no-key field is parsed separately so the app can validate that no
+        # question appears in both scoring sets at the same time.
         self.no_key_entry = tk.Entry(key_frame)
         self.no_key_entry.insert(0, "2,4,7,9,12,14,16,17,18,20")
         self.no_key_entry.grid(
@@ -82,6 +95,8 @@ class YesNoTestApp:
 
         key_frame.columnconfigure(1, weight=1)
 
+        # Thresholds define how the final score is translated into a qualitative
+        # label such as "normal", "mild", or "severe".
         thresholds_frame = tk.LabelFrame(
             self.root,
             text="Градации отчёта. Формат: min-max=Название",
@@ -99,6 +114,8 @@ class YesNoTestApp:
             "15-20=Тяжёлая степень безнадёжности\n",
         )
 
+        # The action buttons represent the main pipeline of the app:
+        # 1) load a Word document, 2) create a Google Form, 3) generate reports.
         buttons_frame = tk.Frame(self.root)
         buttons_frame.pack(fill="x", padx=10, pady=5)
 
@@ -121,7 +138,7 @@ class YesNoTestApp:
 
         self.qr_button = tk.Button(
             buttons_frame,
-            text="Скачать QR Code",
+            text="3. Скачать QR Code",
             command=self.download_qr_code,
             height=2,
             state="disabled",
@@ -130,7 +147,7 @@ class YesNoTestApp:
 
         self.report_button = tk.Button(
             buttons_frame,
-            text="3. Получить ответы и создать Excel/PDF",
+            text="4. Получить ответы и создать Excel/PDF",
             command=self.create_report,
             height=2,
             state="disabled",
@@ -139,7 +156,7 @@ class YesNoTestApp:
 
         self.clear_cache_button = tk.Button(
             buttons_frame,
-            text="Очистить кэш",
+            text="5. Очистить кэш",
             command=self.clear_cache,
             height=2,
             state="disabled",
@@ -155,15 +172,22 @@ class YesNoTestApp:
         preview_frame = tk.LabelFrame(self.root, text="Просмотр / Логи")
         preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
+        # The preview area acts as a live log and inspection panel, showing the
+        # parsed test content and the status of each processing step.
         self.preview_box = tk.Text(preview_frame, wrap="word")
         self.preview_box.pack(fill="both", expand=True, padx=5, pady=5)
 
     def log(self, text: str):
+        # Append each status message to the text widget and keep the view at the
+        # bottom so the user sees the latest progress immediately.
         self.preview_box.insert(tk.END, text + "\n")
         self.preview_box.see(tk.END)
         self.root.update_idletasks()
 
     def get_yes_no_key(self) -> tuple[set[int], set[int]]:
+        # Convert the user-entered question ranges into sets of numbers so the
+        # parser can quickly check whether each question belongs to the yes or no
+        # scoring group.
         yes_score_questions = parse_question_numbers(
             self.yes_key_entry.get()
         )
@@ -182,6 +206,8 @@ class YesNoTestApp:
         return yes_score_questions, no_score_questions
 
     def get_thresholds(self) -> list[GradeThreshold]:
+        # Parse the threshold text field line by line and turn each range into a
+        # structured object that the grading logic can use later.
         raw_text = self.thresholds_text.get("1.0", tk.END).strip()
         thresholds = []
 
@@ -214,6 +240,8 @@ class YesNoTestApp:
         return thresholds
 
     def select_word_file(self):
+        # Let the user select a .docx file, parse it using the yes/no rules, and
+        # preview the resulting test structure before creating a form.
         file_path = filedialog.askopenfilename(
             title="Выберите Word файл",
             filetypes=[
@@ -266,6 +294,8 @@ class YesNoTestApp:
             messagebox.showerror("Ошибка", str(error))
 
     def create_form(self):
+        # Create the Google Form from the parsed test, save the answer-key JSON,
+        # and unlock the next actions so the user can generate reports.
         if self.parsed_test is None:
             messagebox.showwarning("Нет теста", "Сначала выберите Word файл.")
             return
@@ -327,6 +357,8 @@ class YesNoTestApp:
             )
 
     def download_qr_code(self):
+        # Build the responder URL from the form ID and export a QR code image so
+        # the form can be shared quickly in a classroom or by email.
         form_id = self.form_id_entry.get().strip()
 
         if not form_id:
@@ -372,6 +404,8 @@ class YesNoTestApp:
             self.qr_button.config(state="normal", text="Скачать QR Code")
 
     def clear_cache(self):
+        # Remove temporary JSON and QR files produced during the workflow while
+        # keeping the authentication files protected.
         self.log("Очистка временных JSON и QR файлов...")
 
         deleted_files = cleanup_generated_files()
@@ -388,6 +422,18 @@ class YesNoTestApp:
             state="disabled",
             text="Загрузите новый Word файл",
         )
+        self.report_button.config(
+            state="disabled",
+            text="Загрузите новый Word файл",
+        )
+        self.qr_button.config(
+            state="disabled",   
+            text="Загрузите новый Word файл",
+        )
+        self.create_form_button.config(
+            state="disabled",
+            text="Загрузите новый Word файл",
+        )
 
         message = (
             "Кэш очищен. Удалены временные JSON и QR файлы, кроме credentials и token.\n\n"
@@ -400,6 +446,8 @@ class YesNoTestApp:
         )
 
     def create_report(self):
+        # Pull responses from the Google Form, normalize them, grade them with
+        # the saved answer key, and export Excel and PDF reports for review.
         form_id = self.form_id_entry.get().strip()
 
         if not form_id:
@@ -430,7 +478,7 @@ class YesNoTestApp:
                 answer_key_path = selected
 
         try:
-            self.report_button.config(state="disabled", text="Создаю Excel...")
+            self.report_button.config(state="disabled", text="Создаю Excel/PDF...")
             self.root.update_idletasks()
 
             self.log("")

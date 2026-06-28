@@ -1,3 +1,5 @@
+"""Smoke test for the four-option Word parser."""
+
 from school_form_app.parsing.docx_parser import parse_docx
 
 def main():

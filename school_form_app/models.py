@@ -1,3 +1,5 @@
+"""Shared data models used across parsing, form creation, and reporting."""
+
 from dataclasses import dataclass, field
 from typing import List
 

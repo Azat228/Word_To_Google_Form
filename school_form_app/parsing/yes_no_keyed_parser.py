@@ -1,3 +1,9 @@
+"""Parser for yes/no keyed Word tests.
+
+The parser reads table-based questions, validates the yes/no scoring keys,
+and turns the document into a structured test model.
+"""
+
 from docx import Document
 
 from school_form_app.models import ParsedTest, Question, AnswerOption
@@ -140,6 +146,8 @@ def parse_yes_no_table_questions(
     yes_score_questions: set[int],
     no_score_questions: set[int],
 ) -> list[Question]:
+    # Each Word table row represents one question, and the first two columns
+    # contain the question number and its statement.
     questions = []
     seen_question_numbers = set()
 

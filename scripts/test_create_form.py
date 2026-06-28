@@ -1,3 +1,5 @@
+"""Smoke test for creating a Google Form from in-memory test data."""
+
 from google_auth import get_credentials
 from google_forms import create_google_form
 from models import ParsedTest, Question

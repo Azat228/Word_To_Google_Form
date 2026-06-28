@@ -1,3 +1,5 @@
+"""Smoke test for retrieving raw Google Form responses."""
+
 from google_auth import get_credentials
 from google_responses import get_raw_form_responses, save_raw_responses
 

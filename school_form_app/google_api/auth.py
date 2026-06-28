@@ -1,3 +1,9 @@
+"""Google authentication helpers for Forms API access.
+
+The module loads stored credentials or starts the OAuth flow so the app can
+create forms and read responses from Google Forms.
+"""
+
 from pathlib import Path
 
 from google.auth.transport.requests import Request

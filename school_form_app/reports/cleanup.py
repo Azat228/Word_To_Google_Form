@@ -1,3 +1,5 @@
+"""Remove generated runtime files while protecting authentication data."""
+
 from pathlib import Path
 
 

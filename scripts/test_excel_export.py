@@ -1,3 +1,5 @@
+"""Smoke test for Excel report generation."""
+
 from school_form_app.reports.grading import load_json
 from school_form_app.reports.excel_export import export_reports
 

@@ -1,3 +1,5 @@
+"""Helpers for reading and normalizing Google Forms responses."""
+
 import json
 from typing import Any
 
@@ -121,6 +123,8 @@ def normalize_form_responses(form_id: str, creds) -> list[dict]:
 
     normalized_responses = []
 
+    # Convert each raw response into a simpler structure where answers are keyed
+    # by the form question title instead of the Google question ID.
     for response in raw_responses:
         normalized = {
             "response_id": response.get("responseId"),

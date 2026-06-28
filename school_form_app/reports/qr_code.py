@@ -1,3 +1,5 @@
+"""Create QR codes for Google Forms responder links."""
+
 from pathlib import Path
 
 import qrcode

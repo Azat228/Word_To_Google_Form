@@ -1,3 +1,5 @@
+"""Smoke test for the grading and JSON export logic."""
+
 from school_form_app.reports.grading import grade_responses, save_json
 
 

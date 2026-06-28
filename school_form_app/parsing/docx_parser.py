@@ -1,3 +1,9 @@
+"""Parser for four-option Word tests.
+
+This module converts a Word document into a structured test definition that can
+be used to create a Google Form and generate reports.
+"""
+
 import re
 from docx import Document
 
@@ -58,6 +64,8 @@ def parse_four_option_questions(
     lines: list[str],
     option_scores: list[int],
 ) -> list[Question]:
+    # Walk the document line by line, collecting one question and its four
+    # answer options until the results section is reached.
     if len(option_scores) != 4:
         raise ValueError("option_scores must contain exactly 4 numbers.")
 

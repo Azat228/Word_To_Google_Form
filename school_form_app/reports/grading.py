@@ -1,13 +1,24 @@
+"""Grade Google Form responses against the stored answer key.
+
+The module loads response data and the answer key, calculates points per
+question, applies the configured thresholds, and returns a structured grading
+result for each student.
+"""
+
 import json
 from typing import Any
 
 
 def load_json(path: str) -> Any:
+    # Read a JSON file that stores either responses or the answer key so the
+    # rest of the grading pipeline can work with structured data.
     with open(path, "r", encoding="utf-8") as file:
         return json.load(file)
 
 
 def save_json(data: Any, path: str) -> None:
+    # Persist intermediate or final data to disk in a readable JSON format for
+    # later inspection or reuse by other modules.
     with open(path, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=2)
 
@@ -78,6 +89,8 @@ def get_risk_flag(grade_label: str) -> str:
     return "Нет"
 
 def grade_single_response(response: dict, answer_key: dict) -> dict:
+    # Evaluate one student response against the answer key, calculating the
+    # total score, the grade label, and the per-question breakdown.
     answers = response["answers"]
 
     student_name = (
@@ -100,6 +113,8 @@ def grade_single_response(response: dict, answer_key: dict) -> dict:
     )
 
     question_results = []
+
+    # Grade each question individually and accumulate the total score.
     total_score = 0
     max_score = 0
 

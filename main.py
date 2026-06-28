@@ -1,3 +1,9 @@
+"""Entry point for the desktop application.
+
+This module opens the initial menu window and lets the user choose between
+four-option and yes/no test workflows.
+"""
+
 import tkinter as tk
 from tkinter import ttk
 

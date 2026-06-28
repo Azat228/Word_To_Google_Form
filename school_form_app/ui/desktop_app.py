@@ -1,3 +1,9 @@
+"""Tkinter workflow for the four-option test application.
+
+This module builds the main form-processing interface, including score entry,
+threshold configuration, Google Form creation, and report generation.
+"""
+
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from pathlib import Path
@@ -33,12 +39,17 @@ class TestApp:
         self.build_ui()
 
     def build_ui(self):
+        # Construct the full desktop interface by grouping the score settings,
+        # threshold configuration, action buttons, and result preview into a
+        # logical layout for the four-option test flow.
         # -------------------------
         # Option scores
         # -------------------------
         scores_frame = tk.LabelFrame(self.root, text="Стоимость вариантов ответа")
         scores_frame.pack(fill="x", padx=10, pady=5)
 
+        # Each entry box corresponds to one of the four possible answer choices,
+        # so the user can define the score assigned to each option.
         self.score_entries = []
 
         default_scores = ["0", "1", "2", "3"]
@@ -62,6 +73,8 @@ class TestApp:
         )
         thresholds_frame.pack(fill="x", padx=10, pady=5)
 
+        # The threshold editor lets the user describe score ranges and the label
+        # that should appear in the final report for each range.
         self.thresholds_text = tk.Text(thresholds_frame, height=5)
         self.thresholds_text.pack(fill="x", padx=5, pady=5)
 
@@ -76,6 +89,8 @@ class TestApp:
         # -------------------------
         # Buttons
         # -------------------------
+        # Buttons represent the main pipeline: choose a Word test, create a form,
+        # generate QR access, and produce reports once responses arrive.
         buttons_frame = tk.Frame(self.root)
         buttons_frame.pack(fill="x", padx=10, pady=5)
 
@@ -97,7 +112,7 @@ class TestApp:
         self.create_form_button.pack(side="left", fill="x", expand=True, padx=5)
         self.qr_button = tk.Button(
             buttons_frame,
-            text="Скачать QR Code",
+            text="3.Скачать QR Code",
             command=self.download_qr_code,
             height=2,
             state="disabled",
@@ -105,7 +120,7 @@ class TestApp:
         self.qr_button.pack(side="left", fill="x", expand=True, padx=5)
         self.report_button = tk.Button(
             buttons_frame,
-            text="3. Получить ответы и создать Excel/PDF",
+            text="4. Получить ответы и создать Excel/PDF",
             command=self.create_report,
             height=2,
             state="disabled",
@@ -113,7 +128,7 @@ class TestApp:
         self.report_button.pack(side="left", fill="x", expand=True, padx=5)
         self.clear_cache_button = tk.Button(
             buttons_frame,
-            text="Очистить кэш",
+            text="5. Очистить кэш",
             command=self.clear_cache,
             height=2,
             state="disabled",
@@ -135,15 +150,21 @@ class TestApp:
         preview_frame = tk.LabelFrame(self.root, text="Просмотр / Логи")
         preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
+        # The preview pane shows the parsed document content and a running log of
+        # the actions completed by the app.
         self.preview_box = tk.Text(preview_frame, wrap="word")
         self.preview_box.pack(fill="both", expand=True, padx=5, pady=5)
 
     def log(self, text: str):
+        # Add each status message to the preview area so the user can follow the
+        # workflow step by step without leaving the window.
         self.preview_box.insert(tk.END, text + "\n")
         self.preview_box.see(tk.END)
         self.root.update_idletasks()
 
     def get_option_scores(self) -> list[int]:
+        # Read all score entry fields and validate them before passing them to
+        # the parser, which uses them to assign points to each answer option.
         scores = []
 
         for entry in self.score_entries:
@@ -160,6 +181,8 @@ class TestApp:
         return scores
 
     def get_thresholds(self) -> list[GradeThreshold]:
+        # Parse the threshold editor into structured objects so the report layer
+        # can later map total scores to human-readable labels.
         raw_text = self.thresholds_text.get("1.0", tk.END).strip()
         thresholds = []
 
@@ -192,6 +215,8 @@ class TestApp:
         return thresholds
 
     def select_word_file(self):
+        # Open a Word file, parse it into question/option objects, and preview the
+        # extracted content before the form is created.
         file_path = filedialog.askopenfilename(
             title="Выберите Word файл",
             filetypes=[
@@ -230,19 +255,30 @@ class TestApp:
                     self.log(f"   [{option.score}] {option.text}")
 
                 self.log("")
-
-            self.create_form_button.config(state="normal")
             # Ensure report and cache clear buttons stay disabled until the next flow.
-            self.report_button.config(state="disabled")
             self.clear_cache_button.config(
                 state="disabled",
-                text="Очистить кэш",
+                text="5. Очистить кэш",
+            )
+            self.report_button.config(
+            state="disabled",
+            text="4. Получить ответы и создать Excel/PDF",
+            )
+            self.qr_button.config(
+            state="disabled",   
+            text="3. Создать QR код",
+            )
+            self.create_form_button.config(
+            state="normal",
+            text="2. Создать Google Form",
             )
 
         except Exception as error:
             messagebox.showerror("Ошибка", str(error))
 
     def create_form(self):
+        # Turn the parsed test into a Google Form, create a matching answer key,
+        # and prepare a QR code for quick sharing.
         if self.parsed_test is None:
             messagebox.showwarning("Нет теста", "Сначала выберите Word файл.")
             return
@@ -309,6 +345,8 @@ class TestApp:
             self.create_form_button.config(state="normal", text="2. Создать Google Form")
 
     def clear_cache(self):
+        # Remove temporary files produced during earlier steps so the workspace
+        # stays tidy and the user can start a fresh run.
         self.log("Очистка временных JSON и QR файлов...")
 
         deleted_files = cleanup_generated_files()
@@ -325,6 +363,18 @@ class TestApp:
             state="disabled",
             text="Загрузите новый Word файл",
         )
+        self.report_button.config(
+            state="disabled",
+            text="Загрузите новый Word файл",
+        )
+        self.qr_button.config(
+            state="disabled",   
+            text="Загрузите новый Word файл",
+        )
+        self.create_form_button.config(
+            state="disabled",
+            text="Загрузите новый Word файл",
+        )
 
         message = (
             "Кэш очищен. Удалены временные JSON и QR файлы, кроме credentials и token.\n\n"
@@ -337,6 +387,8 @@ class TestApp:
         )
 
     def download_qr_code(self):
+        # Recreate the QR code from a stored form ID when the user wants to share
+        # the form again without generating it from scratch.
         form_id = self.form_id_entry.get().strip()
 
         if not form_id:
@@ -382,6 +434,8 @@ class TestApp:
             self.qr_button.config(state="normal", text="Скачать QR Code")
 
     def create_report(self):
+        # Retrieve Google Form responses, convert them into a normalized format,
+        # grade them, and export both Excel and PDF reports.
         form_id = self.form_id_entry.get().strip()
 
         if not form_id:

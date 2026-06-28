@@ -1,3 +1,9 @@
+"""Export graded results into Excel workbooks.
+
+The module creates both a summary report and a detailed per-question report,
+using formatting helpers to make the spreadsheets easier to read.
+"""
+
 from pathlib import Path
 from typing import Any
 
@@ -68,6 +74,8 @@ def export_summary_report(
     graded_results: list[dict[str, Any]],
     output_path: str,
 ) -> str:
+    # Create a compact workbook with one row per student and a summary of the
+    # overall interpretation for each result.
     wb = Workbook()
     ws = wb.active
     ws.title = "Отчет"
@@ -94,6 +102,8 @@ def export_summary_report(
         "При высоких показателях требуется проверка специалистом."
     )
 
+    # Write one row per student and color the grade column based on the
+    # resulting category label.
     for index, result in enumerate(graded_results, start=1):
         ws.append(
             [
@@ -131,6 +141,8 @@ def export_detailed_report(
     graded_results: list[dict[str, Any]],
     output_path: str,
 ) -> str:
+    # Create a second workbook that expands each student's result into one row
+    # per question, making it easier to review the individual answers.
     wb = Workbook()
     ws = wb.active
     ws.title = "Детальный отчет"
@@ -259,6 +271,8 @@ def export_reports(
     graded_results: list[dict[str, Any]],
     output_dir: str,
 ) -> tuple[str, str]:
+    # Generate both the summary and detailed Excel files from the same graded
+    # dataset so the user can inspect the results at different levels of detail.
     output_folder = Path(output_dir)
     output_folder.mkdir(parents=True, exist_ok=True)
 

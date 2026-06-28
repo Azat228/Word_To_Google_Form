@@ -1,3 +1,5 @@
+"""Smoke test for the Google authentication helper."""
+
 from google_auth import get_credentials
 
 

@@ -1,3 +1,5 @@
+"""Smoke test for the response normalization workflow."""
+
 from school_form_app.google_api.auth import get_credentials
 from school_form_app.google_api.responses import (
     normalize_form_responses,

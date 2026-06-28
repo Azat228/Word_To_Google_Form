@@ -1,3 +1,5 @@
+"""Smoke test for creating a Google Form from a Word document."""
+
 from school_form_app.parsing.docx_parser import parse_docx
 from school_form_app.google_api.auth import get_credentials
 from school_form_app.google_api.forms import create_google_form
