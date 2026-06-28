@@ -15,6 +15,8 @@ from school_form_app.google_api.responses import (
 from school_form_app.reports.answer_key import save_answer_key
 from school_form_app.reports.grading import grade_responses, save_json
 from school_form_app.reports.excel_export import export_reports
+from school_form_app.reports.pdf_export import export_summary_pdf
+from school_form_app.reports.cleanup import cleanup_generated_files
 from school_form_app.reports.qr_code import (
     create_qr_code,
     make_google_form_responder_url,
@@ -117,22 +119,23 @@ class YesNoTestApp:
         )
         self.create_form_button.pack(side="left", fill="x", expand=True, padx=5)
 
-        self.report_button = tk.Button(
-            buttons_frame,
-            text="3. Получить ответы и создать Excel",
-            command=self.create_report,
-            height=2,
-            state="disabled",
-        )
-        self.report_button.pack(side="left", fill="x", expand=True, padx=5)
-
         self.qr_button = tk.Button(
             buttons_frame,
             text="Скачать QR Code",
             command=self.download_qr_code,
             height=2,
+            state="disabled",
         )
         self.qr_button.pack(side="left", fill="x", expand=True, padx=5)
+
+        self.report_button = tk.Button(
+            buttons_frame,
+            text="3. Получить ответы и создать Excel/PDF",
+            command=self.create_report,
+            height=2,
+            state="disabled",
+        )
+        self.report_button.pack(side="left", fill="x", expand=True, padx=5)
 
         form_frame = tk.LabelFrame(self.root, text="Google Form ID")
         form_frame.pack(fill="x", padx=10, pady=5)
@@ -297,6 +300,7 @@ class YesNoTestApp:
             )
 
             self.report_button.config(state="normal")
+            self.qr_button.config(state="normal")
 
         except Exception as error:
             messagebox.showerror("Ошибка", str(error))
@@ -318,6 +322,8 @@ class YesNoTestApp:
             return
 
         try:
+            self.qr_button.config(state="disabled", text="Создаю QR Code...")
+            self.root.update_idletasks()
             responder_url = make_google_form_responder_url(form_id)
 
             output_path = filedialog.asksaveasfilename(
@@ -347,6 +353,8 @@ class YesNoTestApp:
 
         except Exception as error:
             messagebox.showerror("Ошибка", str(error))
+        finally:
+            self.qr_button.config(state="normal", text="Скачать QR Code")
 
     def create_report(self):
         form_id = self.form_id_entry.get().strip()
@@ -414,15 +422,37 @@ class YesNoTestApp:
                 graded_results=graded_results,
                 output_dir=output_dir,
             )
+            pdf_report_path = export_summary_pdf(
+                graded_results=graded_results,
+                output_path=str(Path(output_dir) / "summary_report.pdf"),
+            )
 
             self.log(f"Краткий отчёт создан: {report_path}")
             self.log(f"Подробный отчёт создан: {detailed_report_path}")
+            self.log(f"PDF отчёт создан: {pdf_report_path}")
+
+            self.log("Очистка временных JSON и QR файлов...")
+
+            deleted_files = cleanup_generated_files()
+
+            self.answer_key_path = None
+
+            self.log(f"Удалено файлов: {len(deleted_files)}")
+
+            for deleted_file in deleted_files:
+                self.log(f"Удалён: {deleted_file}")
+
+            message = (
+                "Отчёты созданы:\n\n"
+                f"Краткий Excel отчёт:\n{report_path}\n\n"
+                f"Подробный Excel отчёт:\n{detailed_report_path}\n\n"
+                f"PDF отчёт:\n{pdf_report_path}\n\n"
+                f"Временные JSON/QR файлы удалены: {len(deleted_files)}"
+            )
 
             messagebox.showinfo(
                 "Готово",
-                "Excel отчёты созданы:\n\n"
-                f"Краткий отчёт:\n{report_path}\n\n"
-                f"Подробный отчёт:\n{detailed_report_path}",
+                message,
             )
 
         except Exception as error:
