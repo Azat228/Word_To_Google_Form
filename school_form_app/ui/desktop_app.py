@@ -528,7 +528,7 @@ class TestApp:
         finally:
             self.report_button.config(
                 state="normal" if self.form_id and answer_key_path else "disabled",
-                text="3. Получить ответы и создать Excel/PDF",
+                text="4. Получить ответы и создать Excel/PDF",
             )
 
 

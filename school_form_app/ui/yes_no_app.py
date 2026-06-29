@@ -289,6 +289,19 @@ class YesNoTestApp:
                 state="disabled",
                 text="Очистить кэш",
             )
+            self.report_button.config(
+            state="disabled",
+            text="4. Получить ответы и создать Excel/PDF",
+            )
+            self.qr_button.config(
+            state="disabled",   
+            text="3. Создать QR код",
+            )
+            self.create_form_button.config(
+            state="normal",
+            text="2. Создать Google Form",
+            )
+
 
         except Exception as error:
             messagebox.showerror("Ошибка", str(error))
@@ -543,7 +556,7 @@ class YesNoTestApp:
         finally:
             self.report_button.config(
                 state="normal" if self.form_id and answer_key_path else "disabled",
-                text="3. Получить ответы и создать Excel/PDF",
+                text="4. Получить ответы и создать Excel/PDF",
             )
 
 

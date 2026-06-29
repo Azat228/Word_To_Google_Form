@@ -1,9 +1,14 @@
 """Generate a PDF summary report from graded test results.
 
-This module converts the graded output from the reporting pipeline into a
-presentation-friendly PDF document. It prepares the document layout, applies
-consistent styling, builds summary tables for grade categories, and renders a
-student-by-student results table that can be shared with teachers or parents.
+This module converts graded test results into a PDF report.
+It creates:
+- a short warning/information section,
+- a category-count summary table,
+- a student-by-student results table.
+
+Risk coloring:
+- Review / risk / moderate / умеренная степень -> yellow
+- Urgent review / high risk / severe / тяжелая / высокая / выраженная -> red
 """
 
 from pathlib import Path
@@ -27,10 +32,6 @@ from reportlab.platypus import (
 
 
 def find_existing_font(paths: list[str]) -> str | None:
-    # ReportLab needs actual font files on disk before it can register them.
-    # This helper checks a list of common Windows and Unix font locations and
-    # returns the first one that exists so the PDF can use a local, readable
-    # typeface instead of falling back to a generic font.
     for path in paths:
         if Path(path).exists():
             return path
@@ -39,9 +40,6 @@ def find_existing_font(paths: list[str]) -> str | None:
 
 
 def register_fonts() -> tuple[str, str]:
-    # Register a regular and a bold font with ReportLab so the PDF can use a
-    # familiar visual style. If system fonts are unavailable, the function
-    # gracefully falls back to ReportLab's default fonts.
     regular_font_path = find_existing_font(
         [
             r"C:\Windows\Fonts\arial.ttf",
@@ -87,9 +85,6 @@ def make_paragraph_style(
     alignment: int | None = None,
     text_color=colors.black,
 ) -> ParagraphStyle:
-    # Build a reusable ReportLab paragraph style for the PDF. These styles
-    # control font size, line spacing, alignment, and text color so the report
-    # looks consistent across title, subtitle, body, and table content.
     style = ParagraphStyle(
         name=name,
         fontName=font_name,
@@ -105,21 +100,20 @@ def make_paragraph_style(
 
 
 def paragraph(text: Any, style: ParagraphStyle) -> Paragraph:
-    # Wrap a value in a ReportLab Paragraph object while escaping characters
-    # that would otherwise be interpreted as HTML-like markup. This keeps the
-    # PDF text safe even when the input contains symbols such as '<' or '&'.
     if text is None:
         text = ""
 
-    safe_text = str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    safe_text = (
+        str(text)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
 
     return Paragraph(safe_text, style)
 
 
 def get_category_counts(graded_results: list[dict[str, Any]]) -> Counter:
-    # Count how many students fall into each grade category. This is used to
-    # build the summary table that shows the distribution of results across the
-    # thresholds configured in the grading workflow.
     counter = Counter()
 
     for result in graded_results:
@@ -129,27 +123,61 @@ def get_category_counts(graded_results: list[dict[str, Any]]) -> Counter:
     return counter
 
 
+def get_risk_level(result: dict[str, Any]) -> str:
+    risk_flag = str(result.get("risk_flag", "")).lower()
+    grade_label = str(result.get("grade_label", "")).lower()
+
+    high_risk_words = [
+        "urgent",
+        "high",
+        "высок",
+        "тяж",
+        "выраж",
+        "severe",
+    ]
+
+    risk_words = [
+        "review",
+        "risk",
+        "риск",
+        "умерен",
+        "moderate",
+    ]
+
+    if any(word in risk_flag for word in high_risk_words) or any(
+        word in grade_label for word in high_risk_words
+    ):
+        return "high"
+
+    if any(word in risk_flag for word in risk_words) or any(
+        word in grade_label for word in risk_words
+    ):
+        return "risk"
+
+    return "none"
+
+
+def format_risk_label(result: dict[str, Any]) -> str:
+    risk_level = get_risk_level(result)
+
+    if risk_level == "high":
+        return "Высокий риск"
+
+    if risk_level == "risk":
+        return "Риск"
+
+    return "Нет"
+
+
 def export_summary_pdf(
     graded_results: list[dict[str, Any]],
     output_path: str,
 ) -> str:
-    # Build the complete PDF report from the graded results.
-    # The workflow is split into clear stages:
-    # 1. Prepare the output file and select fonts.
-    # 2. Define paragraph styles for the title, subtitle, body text, and tables.
-    # 3. Create the document object with landscape orientation and margins.
-    # 4. Add a title, summary text, and a grade-category table.
-    # 5. Add the main results table with student names, scores, labels, and risk.
-    # 6. Render the PDF to disk.
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
 
-    # Register fonts before building any paragraphs or tables so the PDF can use
-    # the same typeface consistently throughout the document.
     regular_font, bold_font = register_fonts()
 
-    # Start from ReportLab's built-in style templates and then override them with
-    # the custom font names and spacing needed by this report.
     styles = getSampleStyleSheet()
 
     title_style = ParagraphStyle(
@@ -194,17 +222,7 @@ def export_summary_pdf(
         alignment=TA_CENTER,
         text_color=colors.white,
     )
-    risk_style = make_paragraph_style(
-        name="RiskCustom",
-        font_name=bold_font,
-        font_size=9,
-        leading=11,
-        alignment=TA_CENTER,
-        text_color=colors.red,
-    )   
 
-    # Create the PDF document object with landscape layout so the student table
-    # fits comfortably on one page or a small number of pages.
     doc = SimpleDocTemplate(
         str(output),
         pagesize=landscape(A4),
@@ -214,8 +232,6 @@ def export_summary_pdf(
         bottomMargin=1.2 * cm,
     )
 
-    # The ReportLab story is a list of building blocks that will be rendered in
-    # order. Each element can be a paragraph, spacer, or table.
     story = []
 
     story.append(
@@ -231,7 +247,6 @@ def export_summary_pdf(
         )
     )
 
-    # Add spacing between major sections so the PDF is visually readable.
     story.append(Spacer(1, 8))
 
     total_students = len(graded_results)
@@ -242,8 +257,6 @@ def export_summary_pdf(
 
     story.append(Spacer(1, 8))
 
-    # Summarize how many students fell into each grade category before listing
-    # every individual result in the detailed table.
     category_counts = get_category_counts(graded_results)
 
     if category_counts:
@@ -274,7 +287,12 @@ def export_summary_pdf(
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
                     ("ALIGN", (1, 1), (1, -1), "CENTER"),
-                    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F2F2F2")]),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.white, colors.HexColor("#F2F2F2")],
+                    ),
                 ]
             )
         )
@@ -282,9 +300,6 @@ def export_summary_pdf(
         story.append(category_table)
         story.append(Spacer(1, 14))
 
-    # Prepare the main table header. Each column corresponds to a meaningful
-    # part of the student result: number, name, class, score, max score,
-    # grade label, and risk indicator.
     main_table_data = [
         [
             paragraph("№", header_style),
@@ -297,8 +312,6 @@ def export_summary_pdf(
         ]
     ]
 
-    # Fill the main table row by row so each student appears with their total
-    # score, the final category, and the risk flag generated during grading.
     for index, result in enumerate(graded_results, start=1):
         main_table_data.append(
             [
@@ -308,12 +321,10 @@ def export_summary_pdf(
                 paragraph(result.get("total_score", 0), normal_style),
                 paragraph(result.get("max_score", 0), normal_style),
                 paragraph(result.get("grade_label", ""), small_style),
-                paragraph(result.get("risk_flag", "Нет"), small_style),
+                paragraph(format_risk_label(result), small_style),
             ]
         )
 
-    # Create the main results table and define column widths so the content fits
-    # well on landscape A4 pages without wrapping awkwardly.
     main_table = Table(
         main_table_data,
         colWidths=[
@@ -328,33 +339,78 @@ def export_summary_pdf(
         repeatRows=1,
     )
 
-    main_table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1F4E78")),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("ALIGN", (0, 1), (0, -1), "CENTER"),
-                ("ALIGN", (3, 1), (4, -1), "CENTER"),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F2F2F2")]),
-            ]
-        )
-    )
+    table_style_commands = [
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1F4E78")),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("ALIGN", (0, 1), (0, -1), "CENTER"),
+        ("ALIGN", (3, 1), (4, -1), "CENTER"),
+        ("ALIGN", (6, 1), (6, -1), "CENTER"),
+        (
+            "ROWBACKGROUNDS",
+            (0, 1),
+            (-1, -1),
+            [colors.white, colors.HexColor("#F2F2F2")],
+        ),
+    ]
 
-    # Apply the risk color only to the risk cell in rows that are flagged as
-    # high risk or moderate risk. The rest of the row keeps the normal table style.
-    for row_index, result in enumerate(graded_results, start=2):
-        if result.get("risk_flag") in ("Высокий риск", "риск"):
-            main_table.setStyle(
-                TableStyle(
-                    [
-                        ("BACKGROUND", (6, row_index), (6, row_index), colors.HexColor("#FFE6E6")),
-                        ("TEXTCOLOR", (6, row_index), (6, row_index), colors.HexColor("#8B0000")),
-                    ]
-                )
+    for row_index, result in enumerate(graded_results, start=1):
+        risk_level = get_risk_level(result)
+
+        # ReportLab uses zero-based column indexes.
+        # Column 6 = "Высокий риск".
+        if risk_level == "high":
+            table_style_commands.extend(
+                [
+                    (
+                        "BACKGROUND",
+                        (6, row_index),
+                        (6, row_index),
+                        colors.HexColor("#FFE6E6"),
+                    ),
+                    (
+                        "TEXTCOLOR",
+                        (6, row_index),
+                        (6, row_index),
+                        colors.HexColor("#8B0000"),
+                    ),
+                    (
+                        "FONTNAME",
+                        (6, row_index),
+                        (6, row_index),
+                        bold_font,
+                    ),
+                ]
             )
 
-    # Append the finished results table to the story and build the PDF file.
+        elif risk_level == "risk":
+            table_style_commands.extend(
+                [
+                    (
+                        "BACKGROUND",
+                        (6, row_index),
+                        (6, row_index),
+                        colors.HexColor("#FFF2CC"),
+                    ),
+                    (
+                        "TEXTCOLOR",
+                        (6, row_index),
+                        (6, row_index),
+                        colors.HexColor("#9C6500"),
+                    ),
+                    (
+                        "FONTNAME",
+                        (6, row_index),
+                        (6, row_index),
+                        bold_font,
+                    ),
+                ]
+            )
+
+    main_table.setStyle(
+        TableStyle(table_style_commands)
+    )
+
     story.append(main_table)
 
     doc.build(story)

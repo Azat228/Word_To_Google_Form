@@ -10,8 +10,34 @@ from typing import Any
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
+from datetime import datetime
+def format_submitted_time(submitted_at) -> str:
+    if not submitted_at:
+        return ""
 
+    if isinstance(submitted_at, datetime):
+        return submitted_at.strftime("%Y-%m-%d %H:%M:%S")
 
+    submitted_at = str(submitted_at)
+
+    try:
+        # Google usually gives time like:
+        # 2026-06-29T12:34:56.789Z
+        parsed_time = datetime.fromisoformat(
+            submitted_at.replace("Z", "+00:00")
+        )
+
+        return parsed_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    except ValueError:
+        # fallback: manually extract time from ISO string
+        if "T" in submitted_at:
+            time_part = submitted_at.split("T", 1)[1]
+            time_part = time_part.split(".", 1)[0]
+            time_part = time_part.replace("Z", "")
+            return time_part
+
+        return submitted_at
 def get_grade_fill(label: str) -> PatternFill:
     label_lower = label.lower()
 
@@ -111,7 +137,7 @@ def export_summary_report(
                 result.get("student_name", ""),
                 result.get("student_class", ""),
                 result.get("student_email", ""),
-                result.get("submitted_at", ""),
+                format_submitted_time(result.get("submitted_at")),
                 result.get("total_score", 0),
                 result.get("max_score", 0),
                 result.get("grade_label", ""),
@@ -121,7 +147,7 @@ def export_summary_report(
         )
 
         current_row = ws.max_row
-        grade_cell = ws.cell(row=current_row, column=8)
+        grade_cell = ws.cell(row=current_row, column=9)
         grade_cell.fill = get_grade_fill(str(grade_cell.value))
         risk_cell = ws.cell(row=current_row, column=9)
         if risk_cell.value == "Высокий риск":
@@ -186,7 +212,7 @@ def export_detailed_report(
                     result.get("student_name", ""),
                     result.get("student_class", ""),
                     result.get("student_email", ""),
-                    result.get("submitted_at", ""),
+                    format_submitted_time(result.get("submitted_at")),
                     result.get("total_score", 0),
                     result.get("max_score", 0),
                     result.get("grade_label", ""),
