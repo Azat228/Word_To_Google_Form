@@ -15,6 +15,7 @@ New approach:
     - app chooses the correct parser automatically
 """
 
+from dbm import error
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -26,7 +27,7 @@ from school_form_app.google_api.auth import get_credentials
 from school_form_app.google_api.forms import create_google_form
 
 from school_form_app.reports.answer_key import save_answer_key
-
+from school_form_app.reports.qr_export import create_qr_code, get_qr_code_output_path
 
 class GenericTestApp:
     """
@@ -171,6 +172,12 @@ class GenericTestApp:
             action_frame,
             text="Create Google Form",
             command=self.create_form,
+        ).pack(side="left", padx=(0, 10))
+
+        ttk.Button(
+            action_frame,
+            text="Save QR code",
+            command=self.save_qr_code,
         ).pack(side="left")
 
         # ------------------------------------------------------------
@@ -373,6 +380,58 @@ class GenericTestApp:
         answer_keys_dir.mkdir(exist_ok=True)
 
         return answer_keys_dir / f"answer_key_{form_id}.json"
+    def save_qr_code(self):
+        
+
+    # """
+    # Save QR code for the current Google Form.
+
+    # This function uses self.form_info, which is created after pressing
+    # "Create Google Form".
+
+    # If the form has not been created yet, there is no responder_url,
+    # so we show a warning.
+    # """
+
+        if not self.form_info:
+            messagebox.showwarning(
+            "No Google Form",
+            "Create a Google Form first.",
+            )
+            return
+
+        form_id = self.form_info.get("form_id")
+        responder_url = self.form_info.get("responder_url")
+
+        if not form_id or not responder_url:
+            messagebox.showerror(
+                "Missing form data",
+                "Form ID or responder URL is missing.",
+            )
+            return
+
+        try:
+            qr_path = get_qr_code_output_path(form_id)
+
+            saved_path = create_qr_code(
+                url=responder_url,
+                output_path=str(qr_path),
+            )
+
+            self.log("")
+            self.log(f"QR code saved: {saved_path}")
+
+            messagebox.showinfo(
+                "QR code saved",
+                f"QR code saved:\n{saved_path}",
+            )
+
+        except Exception as error:
+            messagebox.showerror(
+                "QR code error",
+                str(error),
+            )
+            self.log(f"ERROR: {error}")
 
     def create_form(self):
         """
@@ -416,12 +475,21 @@ class GenericTestApp:
             self.log(f"Responder URL: {form_info['responder_url']}")
             self.log(f"Edit URL: {form_info['edit_url']}")
             self.log(f"Answer key: {answer_key_path}")
+            qr_path = get_qr_code_output_path(form_id)
+
+            saved_qr_path = create_qr_code(
+                url=form_info["responder_url"],
+                output_path=str(qr_path),
+            )
+
+            self.log(f"QR code: {saved_qr_path}")            
 
             message = (
                 "Google Form created successfully.\n\n"
                 f"Responder URL:\n{form_info['responder_url']}\n\n"
                 f"Edit URL:\n{form_info['edit_url']}\n\n"
-                f"Answer key:\n{answer_key_path}"
+                f"Answer key:\n{answer_key_path}\n\n"
+                f"QR code:\n{saved_qr_path}"
             )
 
             messagebox.showinfo(
