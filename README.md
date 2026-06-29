@@ -1,23 +1,67 @@
 ﻿# Word to Google Form
 
-Word to Google Form is a desktop Python application that turns Word-based tests into Google Forms, collects student responses, grades them, and exports Excel reports. It is designed for educational and clinical questionnaires where the test content is stored in a Word document and the scoring logic must be applied automatically.
+A desktop Python application that converts Word-based questionnaires into Google Forms, downloads responses, grades them with a saved answer key, and exports Excel reports.
+
+## Key features
+
+- Create Google Forms from structured Word documents
+- Support for two workflows:
+  - Four-option tests with scored answer choices
+  - Yes/No keyed questionnaires with custom scoring keys
+- Save and reuse answer keys for grading
+- Download and normalize Google Form responses
+- Generate Excel summary and detailed reports
+- Create QR codes for form links
+
+## Getting started
+
+### 1. Install dependencies
+
+From the project root:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### 2. Configure Google API access
+
+1. Create a Google Cloud project.
+2. Enable the Google Forms API.
+3. Create OAuth 2.0 client credentials.
+4. Download `credentials.json` and place it in the project root.
+5. Run the app once to complete OAuth and generate `token.json`.
+
+### 3. Run the application
+
+```bash
+python main.py
+```
+
+The app launches a simple desktop menu where you choose between:
+
+- `4 варианта ответа` — four-option scoring tests
+- `ДА / НЕТ с ключом` — yes/no keyed questionnaires
+
+## Workflows
+
+### Four-option workflow
+Use this mode for questionnaires where each question has four answer options and each option can be assigned a score. The app parses the Word document, creates the corresponding Google Form, and saves an answer key for later grading.
+
+### Yes/No keyed workflow
+Use this mode for questionnaires where scoring depends on yes/no response patterns. Enter question numbers for `YES = 1 point` and `NO = 1 point` in the UI to define the scoring key.
+
+## Word document format
+
+The parser expects a structured Word document containing:
+
+- Optional title or introduction text
+- Numbered questions like `1. Question text`
+- Answer options immediately following each question
+
+For four-option tests, each question should be followed by four answer options.
+For yes/no keyed questionnaires, the same question structure is used and scoring is controlled through the answer key fields in the app.
 
 ## What the app does
-
-The application supports two workflows:
-
-- Four-option tests, such as psychological or educational questionnaires with scored answer choices.
-- Yes/No keyed questionnaires, where the scorer defines which questions contribute points for "Yes" and which contribute points for "No".
-
-Once the test is imported, the app can:
-
-- Parse questions and answer options from a Word document.
-- Create a Google Form from the parsed content.
-- Save an answer key for later grading.
-- Download and normalize Google Form responses.
-- Grade responses against the saved answer key.
-- Generate Excel summary and detailed reports.
-- Create a QR code for the form responder link.
 
 ## How the app works
 
@@ -82,74 +126,30 @@ When responses are available, the user enters the Google Form ID and launches th
 - grades them against the saved answer key,
 - creates Excel reports in a selected folder.
 
-## Input format specification
-
-### Four-option mode
-The Word document should use a simple structure:
-
-- A title or introductory text at the top.
-- Questions written as numbered items such as `1. Question text`.
-- Each question followed by four answer options.
-- Optional instructions before the first question.
-- The parser stops when it reaches a line beginning with `подсчет результатов`.
-
-### Yes/No keyed mode
-The Word document should follow the same question structure, but the app also uses the key values entered in the GUI:
-
-- Questions listed in the "YES = 1 point" field count as one point for Yes.
-- Questions listed in the "NO = 1 point" field count as one point for No.
-- The two sets must not overlap.
-
-## Installation
-
-Install the required Python dependencies:
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-Required packages include:
-
-- python-docx
-- google-api-python-client
-- google-auth-oauthlib
-- google-auth
-- openpyxl
-- qrcode[pil]
-
-## Google API setup
-
-1. Create a Google Cloud project.
-2. Enable the Google Forms API.
-3. Create OAuth 2.0 client credentials.
-4. Download `credentials.json` and place it in the project root.
-5. Run the app once so Google OAuth can complete and create `token.json`.
-
 ## Output files
 
-The app creates the following files during normal use:
+The app may create:
 
 - `answer_key_<form_id>.json` — saved answer key
 - `responses_normalized.json` — normalized response data
-- `graded_results.json` — scored results
-- Excel reports in the chosen output folder:
-  - `report.xlsx`
-  - `detailed_report.xlsx`
+- `graded_results.json` — graded responses
+- `report.xlsx` — summary Excel report
+- `detailed_report.xlsx` — detailed Excel report
 - `qr_code_<form_id>.png` — QR code for the form link
+
 ## Project structure
 
 - `main.py` — application entry point
 - `requirements.txt` — Python dependencies
-- `credentials.json` / `token.json` — Google OAuth credentials and token(added to gitignore)
-- `school_form_app/ui/` — Tkinter desktop user interfaces
-- `school_form_app/parsing/` — Word document parsing logic
+- `credentials.json` / `token.json` — Google OAuth files
+- `school_form_app/ui/` — Tkinter desktop UI modules
+- `school_form_app/parsing/` — Word parsing logic
 - `school_form_app/google_api/` — Google Forms authentication and API integration
-- `school_form_app/reports/` — answer-key saving, grading, and Excel export
-- `school_form_app/models.py` — data structures used by the app
-- `*.docx` - word documents as a template 
+- `school_form_app/reports/` — grading, export, and report generation
+- `school_form_app/models.py` — shared data models
 
 ## Notes
 
-- Keep `*.json` private and do not commit it.
-- If parsing fails, confirm that the Word file follows the expected numbering and option format.
-- The GUI supports custom scoring and grading thresholds for different assessment scales.
+- Keep `credentials.json` and `token.json` private.
+- If parsing fails, check that the Word file uses numbered questions and consistent answer option formatting.
+- The desktop UI is in Russian and supports both scored and keyed questionnaire workflows.
