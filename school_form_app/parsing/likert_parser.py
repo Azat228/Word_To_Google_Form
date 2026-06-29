@@ -523,7 +523,7 @@ def parse_likert_docx(
 
     if not questions:
         raise ValueError(
-        "No Likert questions found in the Word file."
+            "No Likert questions found in the Word file."
         )
 
     expected_question_count = config.get("expected_question_count")

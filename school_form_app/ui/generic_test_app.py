@@ -28,7 +28,12 @@ from school_form_app.google_api.forms import create_google_form
 
 from school_form_app.reports.answer_key import save_answer_key
 from school_form_app.reports.qr_export import create_qr_code, get_qr_code_output_path
+from school_form_app.google_api.responses import normalize_form_responses, save_normalized_responses
 
+from school_form_app.reports.grading import grade_responses, save_json
+from school_form_app.reports.excel_export import export_reports
+from school_form_app.reports.pdf_export import export_summary_pdf
+from school_form_app.reports.cleanup import cleanup_generated_files
 class GenericTestApp:
     """
     Main generic test UI.
@@ -179,7 +184,97 @@ class GenericTestApp:
             text="Save QR code",
             command=self.save_qr_code,
         ).pack(side="left")
+                # ------------------------------------------------------------
+        # Reports section
+        # ------------------------------------------------------------
 
+        reports_frame = ttk.LabelFrame(
+            main_frame,
+            text="3. Reports",
+            padding=10,
+        )
+        reports_frame.pack(fill="x", pady=5)
+
+        ttk.Label(
+            reports_frame,
+            text="Google Form ID:",
+        ).grid(row=0, column=0, sticky="w")
+
+        self.form_id_var = tk.StringVar()
+
+        self.form_id_entry = ttk.Entry(
+            reports_frame,
+            textvariable=self.form_id_var,
+            width=70,
+        )
+        self.form_id_entry.grid(
+            row=0,
+            column=1,
+            padx=10,
+            sticky="we",
+        )
+
+        ttk.Label(
+            reports_frame,
+            text="Answer key:",
+        ).grid(row=1, column=0, sticky="w", pady=(8, 0))
+
+        self.answer_key_var = tk.StringVar()
+
+        self.answer_key_entry = ttk.Entry(
+            reports_frame,
+            textvariable=self.answer_key_var,
+            width=70,
+        )
+        self.answer_key_entry.grid(
+            row=1,
+            column=1,
+            padx=10,
+            sticky="we",
+            pady=(8, 0),
+        )
+
+        ttk.Button(
+            reports_frame,
+            text="Choose answer key",
+            command=self.choose_answer_key,
+        ).grid(row=1, column=2, sticky="w", pady=(8, 0))
+
+        ttk.Label(
+            reports_frame,
+            text="Output folder:",
+        ).grid(row=2, column=0, sticky="w", pady=(8, 0))
+
+        self.output_dir_var = tk.StringVar(
+            value="reports_output"
+        )
+
+        self.output_dir_entry = ttk.Entry(
+            reports_frame,
+            textvariable=self.output_dir_var,
+            width=70,
+        )
+        self.output_dir_entry.grid(
+            row=2,
+            column=1,
+            padx=10,
+            sticky="we",
+            pady=(8, 0),
+        )
+
+        ttk.Button(
+            reports_frame,
+            text="Choose folder",
+            command=self.choose_output_folder,
+        ).grid(row=2, column=2, sticky="w", pady=(8, 0))
+
+        ttk.Button(
+            reports_frame,
+            text="Get responses and create Excel/PDF",
+            command=self.create_reports,
+        ).grid(row=3, column=1, sticky="w", padx=10, pady=(12, 0))
+
+        reports_frame.columnconfigure(1, weight=1)
         # ------------------------------------------------------------
         # Output/log section
         # ------------------------------------------------------------
@@ -432,7 +527,209 @@ class GenericTestApp:
                 str(error),
             )
             self.log(f"ERROR: {error}")
+    def confirm_privacy_warning(self) -> bool:
+        # """
+        # Show privacy warning before creating reports.
 
+        # Reports contain personal and sensitive student data.
+        # The user should confirm before generating files.
+        # """
+
+        message = (
+                "Warning: reports may contain personal and sensitive data:\n\n"
+                "- student name\n"
+                "- class\n"
+                "- email\n"
+                "- psychological test answers\n"
+                "- total scores and categories\n\n"
+                "Do not upload these files to GitHub, public chats, "
+                "or public cloud folders.\n\n"
+                "Continue creating reports?"
+        )
+
+        return messagebox.askyesno(
+                "Privacy warning",
+                message,
+        )
+    def choose_answer_key(self):
+        # """
+        # Let user choose an answer_key JSON file manually.
+
+        # This is useful if the app was closed after creating the form.
+        # """
+
+        file_path = filedialog.askopenfilename(
+            title="Choose answer key JSON",
+            filetypes=[
+                ("JSON files", "*.json"),
+                ("All files", "*.*"),
+            ],
+        )
+
+        if not file_path:
+            return
+
+        self.answer_key_var.set(file_path)
+        self.answer_key_path = file_path
+
+        self.log("")
+        self.log(f"Selected answer key: {file_path}")
+
+
+    def choose_output_folder(self):
+        """
+        Let user choose where report files should be saved.
+        """
+
+        folder_path = filedialog.askdirectory(
+            title="Choose output folder",
+        )
+
+        if not folder_path:
+            return
+
+        self.output_dir_var.set(folder_path)
+
+        self.log("")
+        self.log(f"Selected output folder: {folder_path}")
+    def create_reports(self):
+        """
+        Get Google Form responses and create:
+            - report.xlsx
+            - detailed_report.xlsx
+            - summary_report.pdf
+
+        This method uses:
+            - Google Form ID
+            - answer_key JSON
+            - output folder
+        """
+
+        form_id = self.form_id_var.get().strip()
+        answer_key_path = self.answer_key_var.get().strip()
+        output_dir = self.output_dir_var.get().strip()
+
+        if not form_id:
+            messagebox.showwarning(
+                "No Form ID",
+                "Please enter Google Form ID.",
+            )
+            return
+
+        if not answer_key_path:
+            messagebox.showwarning(
+                "No answer key",
+                "Please choose answer key JSON file.",
+            )
+            return
+
+        if not Path(answer_key_path).exists():
+            messagebox.showerror(
+                "Answer key not found",
+                f"Answer key file does not exist:\n{answer_key_path}",
+            )
+            return
+
+        if not output_dir:
+            messagebox.showwarning(
+                "No output folder",
+                "Please choose output folder.",
+            )
+            return
+
+        if not self.confirm_privacy_warning():
+            self.log("Report creation cancelled by user.")
+            return
+
+        try:
+            output_path = Path(output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+
+            self.log("")
+            self.log("Getting Google credentials...")
+            creds = get_credentials()
+
+            self.log("Getting and normalizing responses...")
+            normalized_responses = normalize_form_responses(
+                form_id=form_id,
+                creds=creds,
+            )
+
+            self.log(f"Responses found: {len(normalized_responses)}")
+
+            responses_path = "responses_normalized.json"
+
+            save_normalized_responses(
+                responses=normalized_responses,
+                path=responses_path,
+            )
+
+            self.log(f"Normalized responses saved: {responses_path}")
+
+            self.log("Grading responses...")
+
+            graded_results = grade_responses(
+                responses_path=responses_path,
+                answer_key_path=answer_key_path,
+            )
+
+            graded_results_path = "graded_results.json"
+
+            save_json(
+                data=graded_results,
+                path=graded_results_path,
+            )
+
+            self.log(f"Graded responses: {len(graded_results)}")
+            self.log(f"Graded results saved: {graded_results_path}")
+
+            self.log("Creating Excel reports...")
+
+            report_path, detailed_report_path = export_reports(
+                graded_results=graded_results,
+                output_dir=str(output_path),
+            )
+
+            self.log(f"Report created: {report_path}")
+            self.log(f"Detailed report created: {detailed_report_path}")
+
+            self.log("Creating PDF report...")
+
+            pdf_report_path = export_summary_pdf(
+                graded_results=graded_results,
+                output_path=str(output_path / "summary_report.pdf"),
+            )
+
+            self.log(f"PDF report created: {pdf_report_path}")
+
+            self.log("Cleaning temporary files...")
+
+            deleted_files = cleanup_generated_files()
+
+            self.log(f"Deleted temporary files: {len(deleted_files)}")
+
+            for deleted_file in deleted_files:
+                self.log(f"Deleted: {deleted_file}")
+
+            message = (
+                "Reports created successfully.\n\n"
+                f"Excel report:\n{report_path}\n\n"
+                f"Detailed Excel report:\n{detailed_report_path}\n\n"
+                f"PDF report:\n{pdf_report_path}\n\n"
+                f"Temporary files deleted: {len(deleted_files)}"
+            )
+
+            messagebox.showinfo(
+                "Reports created",
+                message,
+            )
+
+        except Exception as error:
+            messagebox.showerror(
+                "Report error",
+                str(error),
+            )
+            self.log(f"ERROR: {error}")
     def create_form(self):
         """
         Parse the test, create Google Form, and save answer key.
@@ -468,7 +765,8 @@ class GenericTestApp:
             )
 
             self.answer_key_path = str(answer_key_path)
-
+            self.form_id_var.set(form_id)
+            self.answer_key_var.set(str(answer_key_path))
             self.log("")
             self.log("Google Form created successfully.")
             self.log(f"Form ID: {form_info['form_id']}")
